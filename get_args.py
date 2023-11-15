@@ -9,7 +9,7 @@ def get_my_args():
     parser.add_argument("--n-hidden", type=int, default=128,help="number of hidden gcn units")
     parser.add_argument("--n-layers", type=int, default=2,help="number of hidden gcn layers")
     parser.add_argument("--weight-decay", type=float, default=5e-4,help="Weight for L2 loss")
-    parser.add_argument("--aggregator-type", type=str, default="gcn")
+    parser.add_argument("--aggregator-type", type=str, default="mean")
     parser.add_argument('--num-workers', type=int, default=0)
     parser.add_argument('--sample-list', type=list, default=[4,4])
     parser.add_argument("--n-epochs", type=int, default=30,help="number of training epochs")
@@ -20,6 +20,6 @@ def get_my_args():
     parser.add_argument('--half', type=bool, default=False)
     parser.add_argument('--mask_rate', type=float, default=0)
     parser.add_argument('--center_num', type=int, default=7)
-    args = parser.parse_args(args=['--dataset','Cora'])
+    args = parser.parse_args(args=['--dataset','citeseer'])
     print(args)
     return args

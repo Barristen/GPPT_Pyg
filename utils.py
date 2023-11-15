@@ -1,54 +1,54 @@
 import argparse
 import random
 import torch
-import dgl
-# from dgl import DGLGraph
-# from dgl.data import register_data_args, load_data
-# from ogb.nodeproppred  import DglNodePropPredDataset
 import numpy as np
 import os
 from sklearn.metrics import accuracy_score
 from get_args import get_my_args
-from torch_geometric.data import Data, DataLoader
+import argparse
+import random
+import torch
+import numpy as np
+import os
+from sklearn.metrics import accuracy_score
+from get_args import get_my_args
+import torch_geometric
 from torch_geometric.datasets import Planetoid
-from torch_geometric.transforms import NormalizeFeatures
-def my_load_data(args):
-    if args.dataset=='Cora' or args.dataset=='Citeseer' :
-        dataset = Planetoid(root='/tmp/' + args.dataset, name=args.dataset, transform=NormalizeFeatures())
+from torch_geometric.loader import NeighborSampler
+
+def my_load_data(dataset):
+    if dataset in ['Cora', 'CiteSeer']:
+        dataset = Planetoid(root='/tmp/'+dataset, name=dataset)
         data = dataset[0]
+
         features = data.x
         labels = data.y
         train_mask = data.train_mask
         val_mask = data.val_mask
         test_mask = data.test_mask
-        
         in_feats = features.size(1)
-        n_classes = dataset.num_classes
+        n_classes = len(torch.unique(labels))
         n_edges = data.edge_index.size(1) // 2
-        # n_edges = data.graph.number_of_edges()
-    else:
-        data=None
-        features=None
-        labels=None
-        train_mask=None
-        val_mask=None
-        test_mask=None
-        in_feats=None
-        n_classes=None
-        n_edges=None
-    return data,features,labels,train_mask,val_mask,test_mask,in_feats,n_classes,n_edges
 
-def evaluate(model, graph, nid, batch_size, device,sample_list):
-    sampler = dgl.dataloading.MultiLayerNeighborSampler(sample_list)
-    valid_dataloader = dgl.dataloading.NodeDataLoader(graph, nid.int(), sampler,batch_size=batch_size,shuffle=False,drop_last=False,num_workers=0,device=device)
+        return data, features, labels, train_mask, val_mask, test_mask, in_feats, n_classes, n_edges
+
+def evaluate(model, data, nid, batch_size, device,sample_list):
+    valid_loader = NeighborSampler(data.edge_index, node_idx=nid, sizes=sample_list, batch_size=batch_size, shuffle=True,drop_last=False,num_workers=0)
     model.eval()
     predictions = []
     labels = []
-    with torch.no_grad():
-        for input_nodes, output_nodes, mfgs in valid_dataloader:
-            inputs = mfgs[0].srcdata['feat']
-            labels.append(mfgs[-1].dstdata['label'].cpu().numpy())
-            predictions.append(model(mfgs, inputs).argmax(1).cpu().numpy())
+    with torch.no_grad(): 
+        for step, (batch_size, n_id, adjs) in enumerate(valid_loader):      
+            adjs = [adj.to(device) for adj in adjs]
+            # 获取节点特征
+            batch_features = data.x[n_id].to(device)
+            # 获取节点标签（对于目标节点）
+            batch_labels = data.y[n_id[:batch_size]].to(device)
+            temp = model(adjs, batch_features).argmax(1)
+
+            labels.append(batch_labels.cpu().numpy())
+            predictions.append(temp.cpu().numpy())
+
         predictions = np.concatenate(predictions)
         labels = np.concatenate(labels)
         accuracy = accuracy_score(labels, predictions)
@@ -73,8 +73,9 @@ def seed_torch(seed=1029):
 	torch.backends.cudnn.benchmark = False
 	torch.backends.cudnn.deterministic = True
 
-def get_init_info(args):
-    g,features,labels,train_mask,val_mask,test_mask,in_feats,n_classes,n_edges=my_load_data(args)
+def get_init_info(args,dataset,device):
+
+    data,features,labels,train_mask,val_mask,test_mask,in_feats,n_classes,n_edges=my_load_data(dataset)
     print("""----Data statistics------'
       #Edges %d
       #Classes %d
@@ -86,11 +87,6 @@ def get_init_info(args):
            val_mask.int().sum().item(),
            test_mask.int().sum().item()))
     
-    if args.gpu < 0:
-        device='cpu'
-    else:
-        device='cuda:'+str(args.gpu)
-        torch.cuda.set_device(args.gpu)
         
     features = features.to(device)
     labels = labels.to(device)
@@ -102,25 +98,10 @@ def get_init_info(args):
     train_nid = train_mask.nonzero().squeeze()
     val_nid = val_mask.nonzero().squeeze()
     test_nid = test_mask.nonzero().squeeze()
-    g = dgl.remove_self_loop(g)
-    n_edges = g.number_of_edges()
-    if args.gpu >= 0:
-        g = g.int().to(args.gpu)
-    return g,features,labels,in_feats,n_classes,n_edges,train_nid,val_nid,test_nid,device
+    # g = dgl.remove_self_loop(g)
+    # n_edges = g.number_of_edges()
 
-def node_mask(train_mask,mask_rate):
-    mask_rate=int(mask_rate*10)
-    count=0
-    for i in range(train_mask.shape[0]):
-        if train_mask[i]==True:
-            count=count+1
-            if count<=mask_rate:
-                train_mask[i]=False
-                count=count+1
-            if count==10:
-                count=0
-    return train_mask
-
+    return data,features,labels,in_feats,n_classes,train_nid,val_nid,test_nid,device
 if __name__ == '__main__':
     args = get_my_args()
     print(args)

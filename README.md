@@ -4,16 +4,16 @@ This repo contains code accompaning the paper, 	[GPPT: Graph Pre-training and Pr
 
 ### Dependencies
 This code requires the following:
-* python 2.\* or python 3.\*
-* PyTorch v1.8.+
-* DGL v0.7+
+* python 3.9+
+* PyTorch v2.0.1
+* torch-geometric  2.3.1
 
 ### Data
-We evaluate our model on eight benchmark datasets, see the usage instructions in `load_graph.py` and `utils.py` respectively.
+We evaluate our model on eight benchmark datasets, see the usage instructions in `utils.py` .
 
 ### Hyperparameters
 The hyperparameters settings see `get_args.py`.
 
 ### Usage
-To run the code, see the usage instructions at the top of `GPPT.py` or `run_all.py`.
+To run the code, see the usage instructions at the top of `GPPT_Pyg.py`.
 
