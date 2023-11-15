@@ -2,7 +2,7 @@
 
 This repo contains code accompanying the paper, 	[GPPT: Graph Pre-training and Prompt Tuning to Generalize Graph Neural Networks (Mingchen Sun et al., KDD 2022)](https://dl.acm.org/doi/abs/10.1145/3534678.3539249).
 
-### Dependencies(same as (https://github.com/sheldonresearch/ProG))
+### Dependencies(same as https://github.com/sheldonresearch/ProG)
 This code requires the following:
 * python 3.9+
 * PyTorch v2.0.1
